@@ -1,20 +1,33 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult
+} from '@hello-pangea/dnd';
 import { useEffect, useState } from 'react';
 
 import type { RootState } from '../../store';
 import Column from '../../components/Column';
-import { moveTask, createColumn, createTask, updateTask, deleteTask as removeTask } from './boardSlice';
+import {
+  moveTask,
+  createColumn,
+  createTask,
+  updateTask,
+  deleteTask as removeTask,
+  reorderColumns
+} from './boardSlice';
 import { supabase } from '../../supabaseClient';
+import UndoRedoControls from './UndoRedoControls';
 
 const Board = () => {
   const dispatch = useDispatch();
-  const board = useSelector((state: RootState) => state.board);
+  const board = useSelector((state: RootState) => state.board.present); // 👈 Fix: access present state
 
   const [columnTitle, setColumnTitle] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-  const userId = crypto.randomUUID(); // Ideally use user ID from auth
+  const userId = crypto.randomUUID(); // Replace with actual user ID in real app
 
   const handleCreateColumn = async () => {
     if (!columnTitle.trim()) return;
@@ -33,8 +46,8 @@ const Board = () => {
     }
   };
 
-  const onDragEnd = async (result: DropResult) => {
-    const { destination, source } = result;
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, type } = result;
 
     if (!destination) return;
 
@@ -45,18 +58,26 @@ const Board = () => {
       return;
     }
 
-    dispatch(
-      moveTask({
-        sourceColumnId: source.droppableId,
-        destColumnId: destination.droppableId,
-        sourceIndex: source.index,
-        destIndex: destination.index
-      })
-    );
+    if (type === 'COLUMN') {
+      dispatch(
+        reorderColumns({
+          sourceIndex: source.index,
+          destinationIndex: destination.index
+        })
+      );
+    } else {
+      dispatch(
+        moveTask({
+          sourceColumnId: source.droppableId,
+          destColumnId: destination.droppableId,
+          sourceIndex: source.index,
+          destIndex: destination.index
+        })
+      );
+    }
   };
 
   useEffect(() => {
-    // Realtime Task Events
     const tasksChannel = supabase
       .channel('public:tasks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
@@ -96,7 +117,6 @@ const Board = () => {
       })
       .subscribe();
 
-    // Realtime Column Events
     const columnsChannel = supabase
       .channel('public:columns')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'columns' }, (payload) => {
@@ -116,7 +136,6 @@ const Board = () => {
       })
       .subscribe();
 
-    // Realtime Presence Channel
     const presenceChannel = supabase.channel('presence:board', {
       config: {
         presence: {
@@ -146,12 +165,10 @@ const Board = () => {
 
   return (
     <div className="p-4">
-      {/* Online users display */}
       <div className="mb-2 text-sm text-gray-600">
         🟢 {onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} online
       </div>
 
-      {/* Column creation UI */}
       <div className="mb-4 flex gap-2">
         <input
           type="text"
@@ -168,15 +185,37 @@ const Board = () => {
         </button>
       </div>
 
-      {/* Columns with DragDrop */}
+      <UndoRedoControls /> {/* 👈 Added undo/redo UI */}
+
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto">
-          {board.columnOrder.map((columnId) => {
-            const column = board.columns[columnId];
-            const tasks = column.taskIds.map((taskId) => board.tasks[taskId]);
-            return <Column key={column.id} column={column} tasks={tasks} />;
-          })}
-        </div>
+        <Droppable droppableId="board" direction="horizontal" type="COLUMN">
+          {(provided) => (
+            <div
+              className="flex gap-4 overflow-x-auto"
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+            >
+              {board.columnOrder.map((columnId, index) => {
+                const column = board.columns[columnId];
+                const tasks = column.taskIds.map((taskId) => board.tasks[taskId]);
+                return (
+                  <Draggable draggableId={columnId} index={index} key={columnId}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <Column column={column} tasks={tasks} />
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
     </div>
   );

@@ -1,15 +1,18 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { Droppable, Draggable } from '@hello-pangea/dnd';
-import TaskCard from './TaskCard'; // or whatever your task component is called
-import { v4 as uuidv4 } from 'uuid';
-import { createTask, deleteColumn, updateColumn } from '../features/board/boardSlice';
-import styles from './Column.module.css';
-
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { Droppable, Draggable } from "@hello-pangea/dnd";
+import TaskCard from "./TaskCard";
+import { v4 as uuidv4 } from "uuid";
+import {
+  createTask,
+  deleteColumn,
+  updateColumn,
+} from "../features/board/boardSlice";
+import styles from "./Column.module.css";
 
 const Column = ({ column, tasks }: any) => {
   const dispatch = useDispatch();
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(column.title);
 
@@ -22,18 +25,18 @@ const Column = ({ column, tasks }: any) => {
         task: {
           id: uuidv4(),
           title: newTaskTitle.trim(),
-          description: '',
+          description: "",
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       })
     );
 
-    setNewTaskTitle('');
+    setNewTaskTitle("");
   };
 
   const handleDeleteColumn = () => {
-    if (confirm('Are you sure you want to delete this column?')) {
+    if (confirm("Are you sure you want to delete this column?")) {
       dispatch(deleteColumn({ columnId: column.id }));
     }
   };
@@ -46,32 +49,41 @@ const Column = ({ column, tasks }: any) => {
 
   return (
     <div className={styles.column}>
-  <div className={styles.header}>
-    {isEditingTitle ? (
-      <>
-        <input
-          value={editedTitle}
-          onChange={(e) => setEditedTitle(e.target.value)}
-          className={styles.input}
-        />
-        <button onClick={handleTitleUpdate} className="text-green-600">✔</button>
-        <button onClick={() => setIsEditingTitle(false)} className="text-red-600">✖</button>
-      </>
-    ) : (
-      <>
-        <h2 className={styles.title}>{column.title}</h2>
-        <div className={styles.buttonGroup}>
-          <button onClick={() => setIsEditingTitle(true)} title="Edit Title">✏️</button>
-          <button onClick={handleDeleteColumn} title="Delete Column">🗑️</button>
-        </div>
-      </>
-    )}
-  </div>
-
-
-
-
-
+      <div className={styles.header}>
+        {isEditingTitle ? (
+          <>
+            <input
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              className={styles.input}
+            />
+            <button onClick={handleTitleUpdate} className="text-green-600">
+              ✔
+            </button>
+            <button
+              onClick={() => setIsEditingTitle(false)}
+              className="text-red-600"
+            >
+              ✖
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className={styles.title}>{column.title}</h2>
+            <div className={styles.buttonGroup}>
+              <button
+                onClick={() => setIsEditingTitle(true)}
+                title="Edit Title"
+              >
+                ✏️
+              </button>
+              <button onClick={handleDeleteColumn} title="Delete Column">
+                🗑️
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       <Droppable droppableId={column.id}>
         {(provided) => (
@@ -89,12 +101,11 @@ const Column = ({ column, tasks }: any) => {
                     {...provided.dragHandleProps}
                   >
                     <TaskCard
-  key={task.id}
-  task={task}
-  index={index}
-  columnId={column.id}
-/>
-
+                      key={task.id}
+                      task={task}
+                      index={index}
+                      columnId={column.id}
+                    />
                   </div>
                 )}
               </Draggable>
@@ -111,7 +122,10 @@ const Column = ({ column, tasks }: any) => {
           placeholder="New task"
           className="border p-1 rounded flex-1"
         />
-        <button onClick={handleAddTask} className="bg-blue-500 text-white px-2 rounded">
+        <button
+          onClick={handleAddTask}
+          className="bg-blue-500 text-white px-2 rounded"
+        >
           +
         </button>
       </div>

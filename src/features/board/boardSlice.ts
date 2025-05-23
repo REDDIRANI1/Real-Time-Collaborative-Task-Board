@@ -1,10 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { BoardState, Column, Task } from '../../types/board';
+import undoable from 'redux-undo';
 
 const now = new Date().toISOString();
 
-const initialState: BoardState = {
+const initialBoardState: BoardState = {
   columns: {
     'column-1': {
       id: 'column-1',
@@ -27,7 +28,7 @@ const initialState: BoardState = {
 
 const boardSlice = createSlice({
   name: 'board',
-  initialState,
+  initialState: initialBoardState,
   reducers: {
     createTask: (
       state,
@@ -44,23 +45,25 @@ const boardSlice = createSlice({
     },
 
     updateTask: (
-  state,
-  action: PayloadAction<{
-    taskId: string;
-    title?: string;
-    description?: string;
-    comments?: string[];
-  }>
-) => {
-  const { taskId, title, description, comments } = action.payload;
-  const task = state.tasks[taskId];
-  if (task) {
-    if (title !== undefined) task.title = title;
-    if (description !== undefined) task.description = description;
-    if (comments !== undefined) task.comments = comments;
-    task.updatedAt = new Date().toISOString();
-  }
-},
+      state,
+      action: PayloadAction<{
+        taskId: string;
+        title?: string;
+        description?: string;
+        comments?: string[];
+        dueDate?: string;
+      }>
+    ) => {
+      const { taskId, title, description, comments, dueDate } = action.payload;
+      const task = state.tasks[taskId];
+      if (task) {
+        if (title !== undefined) task.title = title;
+        if (description !== undefined) task.description = description;
+        if (comments !== undefined) task.comments = comments;
+        if (dueDate !== undefined) task.dueDate = dueDate;
+        task.updatedAt = new Date().toISOString();
+      }
+    },
 
     deleteTask: (
       state,
@@ -112,15 +115,24 @@ const boardSlice = createSlice({
       }>
     ) => {
       const { sourceColumnId, destColumnId, sourceIndex, destIndex } = action.payload;
-
       const sourceTasks = state.columns[sourceColumnId].taskIds;
       const [movedTaskId] = sourceTasks.splice(sourceIndex, 1);
-
       if (sourceColumnId === destColumnId) {
         sourceTasks.splice(destIndex, 0, movedTaskId);
       } else {
         state.columns[destColumnId].taskIds.splice(destIndex, 0, movedTaskId);
       }
+    },
+
+    reorderColumns: (
+      state,
+      action: PayloadAction<{ sourceIndex: number; destinationIndex: number }>
+    ) => {
+      const { sourceIndex, destinationIndex } = action.payload;
+      const newOrder = [...state.columnOrder];
+      const [moved] = newOrder.splice(sourceIndex, 1);
+      newOrder.splice(destinationIndex, 0, moved);
+      state.columnOrder = newOrder;
     }
   }
 });
@@ -132,7 +144,9 @@ export const {
   createColumn,
   updateColumn,
   deleteColumn,
-  moveTask
+  moveTask,
+  reorderColumns
 } = boardSlice.actions;
 
-export default boardSlice.reducer;
+
+export default undoable(boardSlice.reducer);
