@@ -125,7 +125,7 @@ const TaskCard = ({ task, index, columnId }: Props) => {
                         className="bg-blue-500 text-white px-2 rounded"
                         onClick={handleUpdateDescription}
                       >
-                        ➕
+                       🧾 ➕
                       </button>
                     </div>
                   </div>
